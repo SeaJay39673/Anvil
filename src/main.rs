@@ -1,18 +1,49 @@
 use rust_pty::{NativePtySystem, PtyConfig, PtySystem};
-use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::io::{
+    AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf,
+};
+
+async fn read_output<R: AsyncRead>(mut reader: ReadHalf<R>) -> anyhow::Result<()> {
+    let mut buf = [0u8; 4096];
+    loop {
+        let n = reader.read(&mut buf).await?;
+        if n == 0 {
+            break;
+        }
+        print!("{}", String::from_utf8_lossy(&buf[..n]));
+    }
+
+    Ok(())
+}
+
+async fn write_output<W: AsyncWrite>(mut writer: WriteHalf<W>) -> anyhow::Result<()> {
+    let mut stdin = tokio::io::BufReader::new(tokio::io::stdin());
+    let mut input = String::new();
+
+    loop {
+        input.clear();
+
+        stdin.read_line(&mut input).await?;
+
+        if input.trim() == "exit" {
+            break;
+        }
+
+        writer.write_all(input.as_bytes()).await?;
+    }
+
+    anyhow::Ok(())
+}
 
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn main() -> anyhow::Result<()> {
     let config = PtyConfig::default();
-    let (mut master, mut child) = NativePtySystem::spawn_shell(&config).await?;
+    let (master, mut child) = NativePtySystem::spawn_shell(&config).await?;
 
-    // Write a command
-    master.write_all(b"echo hello\n").await?;
+    let (reader, writer) = tokio::io::split(master);
 
-    // Read output
-    let mut buf = [0u8; 1024];
-    let n = master.read(&mut buf).await?;
-    println!("{}", String::from_utf8_lossy(&buf[..n]));
+    tokio::spawn(read_output(reader));
+    write_output(writer).await?;
 
     // Clean up
     child.kill()?;
