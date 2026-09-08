@@ -1,11 +1,11 @@
-use crate::terminal_core::data_models::{cursor::Cursor, screen::Screen};
+use crate::terminal_core::terminal_session::{cursor::Cursor, screen::Screen};
 
-pub struct Terminal {
+pub struct Session {
     screen: Screen,
     cursor: Cursor,
 }
 
-impl Terminal {
+impl Session {
     pub fn new(width: usize, height: usize) -> Self {
         Self {
             screen: Screen::new(width, height),

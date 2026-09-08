@@ -1,4 +1,4 @@
-use crate::terminal_core::data_models::cell::Cell;
+use crate::terminal_core::terminal_session::cell::Cell;
 
 pub struct Screen {
     width: usize,
