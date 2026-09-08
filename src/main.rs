@@ -3,6 +3,8 @@ use tokio::io::{
     AsyncBufReadExt, AsyncRead, AsyncReadExt, AsyncWrite, AsyncWriteExt, ReadHalf, WriteHalf,
 };
 
+mod terminal_core;
+
 async fn read_output<R: AsyncRead>(mut reader: ReadHalf<R>) -> anyhow::Result<()> {
     let mut buf = [0u8; 4096];
     loop {
@@ -45,7 +47,6 @@ async fn main() -> anyhow::Result<()> {
     tokio::spawn(read_output(reader));
     write_output(writer).await?;
 
-    // Clean up
     child.kill()?;
     Ok(())
 }
